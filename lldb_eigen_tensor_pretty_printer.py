@@ -1,5 +1,4 @@
 import lldb
-import re
 
 
 globalDebugger = None

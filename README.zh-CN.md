@@ -7,6 +7,7 @@
 - **美化显示**：在调试器中以友好的格式显示 `Eigen::Tensor` 的类型和维度信息
 - **交互式探索**：在 LLDB 的Variables窗口中展开张量，逐层导航各个维度的元素
 - **多维度支持**：支持任意维度的张量（0维标量到N维张量）
+- **TensorMap 支持**：除 `Eigen::Tensor` 外，也支持 `Eigen::TensorMap` 对象
 - **高效缓存**：智能缓存张量元素，提升调试性能
 
 ## 安装
@@ -114,15 +115,16 @@ lldb ./test_tensor
 
 ### 支持的张量配置
 
-本插件支持 `Eigen::Tensor` 的以下模板参数：
+本插件支持以下张量模板：
 
 ```cpp
 Eigen::Tensor<ScalarType, NumDimensions, StorageOrder>
+Eigen::TensorMap<Eigen::Tensor<ScalarType, NumDimensions, StorageOrder>>
 ```
 
-- **ScalarType**: 任何标量类型（float, double, int, 等）
-- **NumDimensions**: 任意维度数
-- **StorageOrder**: `Eigen::ColMajor` 或 `Eigen::RowMajor`
+- **ScalarType**：任何标量类型（float、double、int 等）
+- **NumDimensions**：任意维度数
+- **StorageOrder**：`0`（`Eigen::ColMajor`）或 `1`（`Eigen::RowMajor`）
 
 ## 技术细节
 

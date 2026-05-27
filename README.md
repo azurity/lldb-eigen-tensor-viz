@@ -9,6 +9,7 @@ Provides pretty-printing and visualization support for `Eigen::Tensor` types in 
 - **Pretty formatting**: Displays `Eigen::Tensor` type and dimension information in a clear, readable format within the debugger
 - **Interactive exploration**: Expands tensors in LLDB's Variables view for step-by-step navigation through dimensions
 - **Multi-dimensional support**: Handles tensors of any rank, from 0D scalars to N-dimensional tensors
+- **TensorMap support**: Also supports `Eigen::TensorMap` objects in addition to `Eigen::Tensor`
 - **Efficient caching**: Caches tensor elements intelligently to improve debugging performance
 
 ## Installation
@@ -116,15 +117,16 @@ In LLDB's Variables view, you can:
 
 ### Supported tensor configuration
 
-This pretty printer supports the following `Eigen::Tensor` template:
+This pretty printer supports the following tensor templates:
 
 ```cpp
 Eigen::Tensor<ScalarType, NumDimensions, StorageOrder>
+Eigen::TensorMap<Eigen::Tensor<ScalarType, NumDimensions, StorageOrder>>
 ```
 
 - **ScalarType**: any scalar type such as `float`, `double`, `int`, etc.
 - **NumDimensions**: any number of dimensions
-- **StorageOrder**: `Eigen::ColMajor` or `Eigen::RowMajor`
+- **StorageOrder**: `0` (`Eigen::ColMajor`) or `1` (`Eigen::RowMajor`)
 
 ## Implementation details
 

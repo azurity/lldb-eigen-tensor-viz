@@ -11,7 +11,11 @@ def __lldb_init_module(debugger, internal_dict):
         debugger.HandleCommand(
             "type summary add --expand -x \"^Eigen::Tensor<.*>$\" -F lldb_eigen_tensor_pretty_printer.tensor_pretty_printer -p -r -w Eigen")
         debugger.HandleCommand(
+            "type summary add --expand -x \"^Eigen::TensorMap<.*>$\" -F lldb_eigen_tensor_pretty_printer.tensor_pretty_printer -p -r -w Eigen")
+        debugger.HandleCommand(
             "type synthetic add -x \"^Eigen::Tensor<.*>$\" -l lldb_eigen_tensor_pretty_printer.TensorSyntheticProvider -p -r -w Eigen")
+        debugger.HandleCommand(
+            "type synthetic add -x \"^Eigen::TensorMap<.*>$\" -l lldb_eigen_tensor_pretty_printer.TensorSyntheticProvider -p -r -w Eigen")
         debugger.HandleCommand("type category enable Eigen")
     except Exception as err:
         print(err)
@@ -22,13 +26,17 @@ class TensorDesc():
         real_value = val_obj.GetNonSyntheticValue()
         real_type = val_obj.type.GetCanonicalType()
         self.type_name = real_type.name
+        self.is_map = False
+        if real_type.name.split('<')[0] == 'Eigen::TensorMap':
+            self.is_map = True
+            real_type = real_type.template_args[0]
         self.scalar = real_type.template_args[0]
         self.N = int(real_type.GetTemplateArgumentValue(
             val_obj.GetTarget(), 1).value)
         self.direct = int(real_type.GetTemplateArgumentValue(
             val_obj.GetTarget(), 2).value)
         dimension_data = real_value.GetValueForExpressionPath(
-            '.m_storage.m_dimensions').children[0].children[0]
+            '.m_dimensions' if self.is_map else '.m_storage.m_dimensions').children[0].children[0]
         self.dims = [int(item.value) for item in dimension_data.children]
 
     def fold_index(self, index):
@@ -89,7 +97,7 @@ def get_tensor_iter_type(val_obj, desc: TensorDesc):
 def create_children_getter(val_obj, base_index: int, sub_n: int):
     desc = TensorDesc(val_obj)
     data_ptr = int(val_obj.GetNonSyntheticValue(
-    ).GetValueForExpressionPath('.m_storage.m_data').value, 16)
+    ).GetValueForExpressionPath('.m_data' if desc.is_map else '.m_storage.m_data').value, 16)
     if desc.N == 0:
         return None, 0, val_obj.CreateValueFromAddress(f'scalar', data_ptr, desc.scalar)
     elif sub_n + 1 == desc.N:
@@ -112,15 +120,7 @@ def create_children_getter(val_obj, base_index: int, sub_n: int):
         return getter, desc.dims[sub_n], None
 
 
-class TensorSyntheticProvider():
-    def __init__(self, val_obj, internal_dict):
-        try:
-            self.children_getter, self.children_n, self.value = create_children_getter(
-                val_obj, 0, 0)
-            self.children_cache = dict()
-        except Exception as err:
-            print(err)
-
+class BaseSyntheticProvider():
     def num_children(self, max_children: int) -> int:
         return self.children_n
 
@@ -150,7 +150,17 @@ class TensorSyntheticProvider():
         return self.value
 
 
-class TensorIterSyntheticProvider():
+class TensorSyntheticProvider(BaseSyntheticProvider):
+    def __init__(self, val_obj, internal_dict):
+        try:
+            self.children_getter, self.children_n, self.value = create_children_getter(
+                val_obj, 0, 0)
+            self.children_cache = dict()
+        except Exception as err:
+            print(err)
+
+
+class TensorIterSyntheticProvider(BaseSyntheticProvider):
     def __init__(self, val_obj, internal_dict):
         try:
             raw_value = val_obj.GetNonSyntheticValue()
@@ -159,30 +169,8 @@ class TensorIterSyntheticProvider():
                 raw_value.GetValueForExpressionPath('.data').value, 16)
             offset = int(raw_value.GetValueForExpressionPath('.offset').value)
             n = int(raw_value.GetValueForExpressionPath('.n').value)
-            self.children_getter, self.children_n = create_children_getter(
+            self.children_getter, self.children_n, self.value = create_children_getter(
                 val_obj.CreateValueFromAddress('base', data_ptr, real_type), offset, n + 1)
             self.children_cache = dict()
         except Exception as err:
             print(err)
-
-    def num_children(self, max_children: int) -> int:
-        return self.children_n
-
-    def get_child_index(self, name: str) -> int:
-        try:
-            return int(name.lstrip('[').rstrip(']'))
-        except:
-            return -1
-
-    def get_child_at_index(self, index: int) -> lldb.SBValue | None:
-        if index < 0 or index >= self.children_n:
-            return None
-        if index not in self.children_cache:
-            self.children_cache[index] = self.children_getter(index)
-        return self.children_cache[index]
-
-    def update(self) -> bool:
-        return False
-
-    def has_children(self) -> bool:
-        return True

@@ -124,7 +124,7 @@ Eigen::Tensor<ScalarType, NumDimensions, StorageOrder>
 
 - **ScalarType**: any scalar type such as `float`, `double`, `int`, etc.
 - **NumDimensions**: any number of dimensions
-- **StorageOrder**: `Eigen::ColMajor` or `Eigne::RowMajor`
+- **StorageOrder**: `Eigen::ColMajor` or `Eigen::RowMajor`
 
 ## Implementation details
 

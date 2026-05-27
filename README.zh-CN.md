@@ -122,7 +122,7 @@ Eigen::Tensor<ScalarType, NumDimensions, StorageOrder>
 
 - **ScalarType**: 任何标量类型（float, double, int, 等）
 - **NumDimensions**: 任意维度数
-- **StorageOrder**: `Eigen::ColMajor` 或 `Eigne::RowMajor`
+- **StorageOrder**: `Eigen::ColMajor` 或 `Eigen::RowMajor`
 
 ## 技术细节
 
